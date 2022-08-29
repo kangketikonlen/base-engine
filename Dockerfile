@@ -1,71 +1,63 @@
-FROM php:8.1.3-fpm-alpine3.15
+FROM ubuntu:22.04
 
-ENV NGINX_VERSION 1.20.2
-ENV NJS_VERSION   0.7.0
-ENV PKG_RELEASE   1
+# Set program version environment
+ENV PHP_VERSION 8.1
+ENV MARIADB_VERSION 10.9
 
-# install necessary alpine packages
-RUN apk update && apk add --no-cache \
-	zip \
-	unzip \
+# Set misc environment
+ENV REGION Asia/Jakarta
+
+# Update repository
+RUN apt-get update && apt upgrade -y
+
+# Install base os
+RUN apt-get install -y supervisor \
+	openssh-server \
+	curl \
+	sudo \
 	dos2unix \
-	supervisor \
-	libpng-dev \
-	libzip-dev \
-	freetype-dev \
-	$PHPIZE_DEPS \
-	libjpeg-turbo-dev \
-	git \
-	nodejs \
-	npm
+	tzdata \
+	apt-transport-https
 
-# compile native PHP packages
-RUN docker-php-ext-install \
-	gd \
-	pcntl \
-	bcmath \
-	mysqli \
-	pdo_mysql
+# Configure servertime
+RUN ln -fs /usr/share/zoneinfo/${REGION} /etc/localtime && \
+	dpkg-reconfigure -f noninteractive tzdata
 
-# configure packages
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+# Install nginx
+RUN apt-get install -y nginx
 
-# install additional packages from PECL
-RUN pecl install zip && docker-php-ext-enable zip \
-	&& pecl install igbinary && docker-php-ext-enable igbinary \
-	&& yes | pecl install redis && docker-php-ext-enable redis
+# Install php extension
+RUN apt-get install -y openssl \
+	php-fpm \
+	php${PHP_VERSION}-common \
+	php${PHP_VERSION}-mysql \
+	php${PHP_VERSION}-fpm \
+	php${PHP_VERSION}-curl \
+	php${PHP_VERSION}-xml \
+	php${PHP_VERSION}-mbstring \
+	php${PHP_VERSION}-zip \
+	php${PHP_VERSION}-gd
 
-# install nginx
-RUN set -x \
-	&& nginxPackages=" \
-	nginx=${NGINX_VERSION}-r${PKG_RELEASE} \
-	nginx-module-xslt=${NGINX_VERSION}-r${PKG_RELEASE} \
-	nginx-module-geoip=${NGINX_VERSION}-r${PKG_RELEASE} \
-	nginx-module-image-filter=${NGINX_VERSION}-r${PKG_RELEASE} \
-	nginx-module-njs=${NGINX_VERSION}.${NJS_VERSION}-r${PKG_RELEASE} \
-	" \
-	set -x \
-	&& KEY_SHA512="e7fa8303923d9b95db37a77ad46c68fd4755ff935d0a534d26eba83de193c76166c68bfe7f65471bf8881004ef4aa6df3e34689c305662750c0172fca5d8552a *stdin" \
-	&& apk add --no-cache --virtual .cert-deps \
-	openssl \
-	&& wget -O /tmp/nginx_signing.rsa.pub https://nginx.org/keys/nginx_signing.rsa.pub \
-	&& if [ "$(openssl rsa -pubin -in /tmp/nginx_signing.rsa.pub -text -noout | openssl sha512 -r)" = "$KEY_SHA512" ]; then \
-	echo "key verification succeeded!"; \
-	mv /tmp/nginx_signing.rsa.pub /etc/apk/keys/; \
-	else \
-	echo "key verification failed!"; \
-	exit 1; \
-	fi \
-	&& apk del .cert-deps \
-	&& apk add -X "https://nginx.org/packages/alpine/v$(egrep -o '^[0-9]+\.[0-9]+' /etc/alpine-release)/main" --no-cache $nginxPackages
+# Install nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+RUN apt-get install -y nodejs
 
+# Create run folder
+RUN mkdir -p /var/run/php \
+	&& mkdir -p /var/run/sshd
+
+# Output nginx logs to stdout
 RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 	&& ln -sf /dev/stderr /var/log/nginx/error.log
 
 # copy supervisor configuration
 COPY ./docker/supervisord.conf /etc/supervisord.conf
+COPY ./docker/sshd_config /etc/ssh/sshd_config
 
-EXPOSE 80
+# Setup root password
+RUN echo "root:SSH@2022.ftech"|chpasswd
+
+EXPOSE 22 80
 
 # run supervisor
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
