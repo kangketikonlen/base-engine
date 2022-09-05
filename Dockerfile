@@ -54,6 +54,9 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 COPY ./docker/supervisord.conf /etc/supervisord.conf
 COPY ./docker/sshd_config /etc/ssh/sshd_config
 
+# Copy php configuration
+COPY ./docker/php.ini /etc/php/8.1/fpm/php.ini
+
 # Setup root password
 RUN echo "root:SSH@2022.ftech"|chpasswd
 
