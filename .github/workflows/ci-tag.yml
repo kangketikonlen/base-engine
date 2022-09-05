@@ -1,17 +1,23 @@
-name: 🔖 Create tags
+name: Tagging
+
 on:
   push:
+    branches: 'main'
 
 jobs:
-  Tag-and-release:
+  build:
+    name: Bump tag
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Fetch tags
-        shell: bash
-        run: git fetch --tags -f
-      - name: Autotag
-        uses: DanySK/semver-autotag-action@master
+    - uses: actions/checkout@v2
+
+    - name: Create an incremental release
+      uses: aurestic/incrementarl-create-release@master
+      with:
+        flag_branch: true
+        message: Bump version
+        prev_tag: 'v'
+        update_odoo_module_version: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
