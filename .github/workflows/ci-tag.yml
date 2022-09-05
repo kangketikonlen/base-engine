@@ -2,11 +2,11 @@ name: Tagging
 
 on:
   push:
-    branches: 'main'
+    branches: '0.1'
 
 jobs:
   build:
-    name: Bump tag
+    name: 🔖 Bump tag
     runs-on: ubuntu-latest
 
     steps:
