@@ -1,4 +1,4 @@
-name: Build and deploy
+name: 🔖 Create tags
 on:
   push:
 
