@@ -16,10 +16,3 @@ jobs:
         run: git fetch --tags -f
       - name: Autotag
         uses: DanySK/semver-autotag-action@master
-      - name: Deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG=$(git describe --tags --exact-match HEAD)
-          hub release create -m "$(git tag -l --format='%(contents)' "$TAG")" "$TAG" || true
-          hub release edit -m '' -a a_file "$TAG"
