@@ -1,3 +1,3 @@
 # Base System
 
-Alpine, nginx, php dan npm
+Alpine or ubuntu, nginx, php dan npm
