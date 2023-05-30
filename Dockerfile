@@ -17,7 +17,8 @@ RUN apt-get install -y supervisor \
 	sudo \
 	dos2unix \
 	tzdata \
-	apt-transport-https
+	apt-transport-https \
+	nano
 
 # Configure servertime
 RUN ln -fs /usr/share/zoneinfo/${REGION} /etc/localtime && \

@@ -1,40 +1,46 @@
 on:
   push:
-    branch: "main"
+    branches:
+      - "main"
+      - "stable"
 
 env:
   IMAGE_NAME: ${{ github.event.repository.name }}
 
-name: 🔖 Create System Tags
+name: 📦 Build, Pack and Ship!
 jobs:
   build:
-    name: 🔖 Bump tag
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+    - name: 🐙 Git checkout
+      uses: actions/checkout@v3
 
-    - name: Create auto tag
+    - name: 📁 Make sure repository is latest
+      run: git fetch --prune --unshallow
+
+    - name: 🔖 Create tag
       uses: kangketikonlen/base-tagging@main
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_NAME: ${{ github.event.repository.name }}
+        REPO_TYPE: ${{ github.event.repository.owner.type }}
+        REPO_OWNER: ${{ github.event.repository.owner.name }}
+        PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        PRESERVE_VERSION: 5
 
-    - name: Build image
+    - name: 🐳 Build image
       run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-    
-    - name: Log in to registry
+
+    - name: 🔑 Log in to registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-    
-    - name: Push image
+
+    - name: 🛳️ Push image
       run: |
         IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
-        # Change all uppercase to lowercase
         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-        # Strip git ref prefix from version
-        VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
-        # Strip "v" prefix from tag name
-        VERSION=$(echo $VERSION | sed -e 's/^v//')
+        LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+        LATEST_TAG=$(echo $LATEST_TAG | sed -e 's/^v//')
         echo IMAGE_ID=$IMAGE_ID
-        echo VERSION=$VERSION
-        docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-        docker push $IMAGE_ID:$VERSION
+        echo LATEST_TAG=$LATEST_TAG
+        echo "NEW_TAG=$LATEST_TAG" >> $GITHUB_ENV
+        docker tag $IMAGE_NAME $IMAGE_ID:$LATEST_TAG
+        docker push $IMAGE_ID:$LATEST_TAG
