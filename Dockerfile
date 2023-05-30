@@ -8,7 +8,8 @@ ENV MARIADB_VERSION 10.9
 ENV REGION Asia/Jakarta
 
 # Update repository
-RUN apt-get update && apt upgrade -y
+RUN apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
 # Install base os
 RUN apt-get install -y supervisor \
@@ -18,7 +19,8 @@ RUN apt-get install -y supervisor \
 	dos2unix \
 	tzdata \
 	apt-transport-https \
-	nano
+	nano \
+	cron
 
 # Configure servertime
 RUN ln -fs /usr/share/zoneinfo/${REGION} /etc/localtime && \
